@@ -1,28 +1,60 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Parser where
 
+import Control.Applicative ( Alternative(empty, (<|>)) )
+
+data Input = Input
+  { readInput    :: Maybe (Char, Input)
+  , indexOfInput :: Int
+  } deriving (Show, Eq)
+
+makeInput :: String -> Input
+makeInput = go 0
+  where
+    go index [] = Input {readInput = Nothing, indexOfInput = index}
+    go index (x : xs) =
+      Input
+        { readInput = Just (x, go (index + 1) xs),
+          indexOfInput = index
+        }
+
+data ParserError = ParserError Int String deriving (Show)
+
+instance Alternative (Either ParserError) where
+  empty = Left $ ParserError 0 "empty"
+  (<|>) (Left _) r = r
+  (<|>) l _ = l
+
 newtype Parser a = Parser
-  { runParser :: String -> Maybe (String, a)
+  { runParser :: Input -> Either ParserError (a, Input)
   }
 
 instance Functor Parser where
   fmap f p = Parser $ \input -> do
-    (input', a) <- runParser p input
-    return (input', f a)
+    (a, input') <- runParser p input
+    return (f a, input')
 
 instance Applicative Parser where
-  pure a = Parser $ \input -> Just (input, a)
+  pure a = Parser $ \input -> Right (a, input)
   (<*>) p1 p2 = Parser $ \input -> do
-    (input', f) <- runParser p1 input
-    (input'', a) <- runParser p2 input'
-    return (input'', f a)
+    (f, input') <- runParser p1 input
+    (a, input'') <- runParser p2 input'
+    return (f a, input'')
+
+instance Alternative Parser where
+  empty = Parser $ const empty
+  (<|>) p1 p2 = Parser $ \input -> runParser p1 input <|> runParser p2 input
 
 charP :: Char -> Parser Char
 charP x = Parser f
   where
-    f (y : ys)
-      | x == y = Just (ys, x)
-      | otherwise = Nothing
-    f [] = Nothing
+    f Input {readInput = Just (y, ys), indexOfInput = index}
+      | x == y = Right (x, ys)
+      | otherwise = Left $ ParserError index ("Expected '" ++ [x] ++ "', but found '" ++ [y] ++ "'")
+    f Input {readInput = _, indexOfInput = index} = Left $ ParserError index ("Expected '" ++ [x] ++ "', but reached end of string")
 
 stringP :: String -> Parser String
-stringP = traverse charP
+stringP xs = Parser $ \input -> case runParser (traverse charP xs) input of
+  Left _ -> Left $ ParserError (indexOfInput input) ("Expected \"" ++ xs ++ "\"")
+  other -> other
