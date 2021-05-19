@@ -2,7 +2,7 @@
 
 module Parser where
 
-import Control.Applicative ( Alternative(empty, (<|>)) )
+import           Control.Applicative (Alternative (..))
 
 data Input = Input
   { readInput    :: Maybe (Char, Input)
@@ -24,7 +24,7 @@ data ParserError = ParserError Int String deriving (Show)
 instance Alternative (Either ParserError) where
   empty = Left $ ParserError 0 "empty"
   (<|>) (Left _) r = r
-  (<|>) l _ = l
+  (<|>) l _        = l
 
 newtype Parser a = Parser
   { runParser :: Input -> Either ParserError (a, Input)
@@ -58,3 +58,26 @@ stringP :: String -> Parser String
 stringP xs = Parser $ \input -> case runParser (traverse charP xs) input of
   Left _ -> Left $ ParserError (indexOfInput input) ("Expected \"" ++ xs ++ "\"")
   other -> other
+
+eofP :: Parser String
+eofP = Parser $ \input -> case readInput input of
+  Nothing -> Right ("", input)
+  _       -> Left $ ParserError (indexOfInput input) "Expected EOF"
+
+spanP :: (Parser Char -> Parser String) -> (Char -> Bool) -> Parser String
+spanP p = p . parseIf
+  where parseIf f = Parser $ \input -> case readInput input of
+          Just (x, xs)
+            | f x -> Right (x, xs)
+            | otherwise -> Left $ ParserError (indexOfInput input) "TODO: Error"
+          _ -> Left $ ParserError (indexOfInput input) "TODO: Error"
+
+
+manyP :: (Char -> Bool) -> Parser String
+manyP = spanP many
+
+someP :: (Char -> Bool) -> Parser String
+someP = spanP some
+
+sepBy :: Parser a -> Parser b -> Parser [b]
+sepBy sep element = (:) <$> element <*> many (sep *> element) <|> pure []
