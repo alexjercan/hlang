@@ -15,8 +15,8 @@ makeInput = go 0
     go index [] = Input {readInput = Nothing, indexOfInput = index}
     go index (x : xs) =
       Input
-        { readInput = Just (x, go (index + 1) xs),
-          indexOfInput = index
+        { readInput = Just (x, go (index + 1) xs)
+        , indexOfInput = index
         }
 
 data ParserError = ParserError Int String deriving (Show)
@@ -38,7 +38,7 @@ instance Functor Parser where
 instance Applicative Parser where
   pure a = Parser $ \input -> Right (a, input)
   (<*>) p1 p2 = Parser $ \input -> do
-    (f, input') <- runParser p1 input
+    (f, input')  <- runParser p1 input
     (a, input'') <- runParser p2 input'
     return (f a, input'')
 
@@ -57,27 +57,25 @@ charP x = Parser f
 stringP :: String -> Parser String
 stringP xs = Parser $ \input -> case runParser (traverse charP xs) input of
   Left _ -> Left $ ParserError (indexOfInput input) ("Expected \"" ++ xs ++ "\"")
-  other -> other
+  other  -> other
 
 eofP :: Parser String
 eofP = Parser $ \input -> case readInput input of
   Nothing -> Right ("", input)
   _       -> Left $ ParserError (indexOfInput input) "Expected EOF"
 
-spanP :: (Parser Char -> Parser String) -> (Char -> Bool) -> Parser String
-spanP p = p . parseIf
-  where parseIf f = Parser $ \input -> case readInput input of
-          Just (x, xs)
-            | f x -> Right (x, xs)
-            | otherwise -> Left $ ParserError (indexOfInput input) "TODO: Error"
-          _ -> Left $ ParserError (indexOfInput input) "TODO: Error"
+charPredP :: (Char -> Bool) -> Parser Char
+charPredP f = Parser $ \input -> case readInput input of
+  Just (x, xs)
+    | f x -> Right (x, xs)
+    | otherwise -> Left $ ParserError (indexOfInput input) "TODO: Error"
+  _ -> Left $ ParserError (indexOfInput input) "TODO: Error"
 
+manyPredP :: (Char -> Bool) -> Parser String
+manyPredP = many . charPredP
 
-manyP :: (Char -> Bool) -> Parser String
-manyP = spanP many
-
-someP :: (Char -> Bool) -> Parser String
-someP = spanP some
+somePredP :: (Char -> Bool) -> Parser String
+somePredP = some . charPredP
 
 sepBy :: Parser a -> Parser b -> Parser [b]
 sepBy sep element = (:) <$> element <*> many (sep *> element) <|> pure []
