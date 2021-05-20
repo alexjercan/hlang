@@ -77,5 +77,14 @@ manyPredP = many . charPredP
 somePredP :: (Char -> Bool) -> Parser String
 somePredP = some . charPredP
 
-sepBy :: Parser a -> Parser b -> Parser [b]
-sepBy sep element = (:) <$> element <*> many (sep *> element) <|> pure []
+someSepBy :: Parser a -> Parser b -> Parser [b]
+someSepBy sep element = (:) <$> element <*> many (sep *> element)
+
+manySepBy :: Parser a -> Parser b -> Parser [b]
+manySepBy sep element = someSepBy sep element <|> pure []
+
+someEndWith :: Parser a -> Parser b -> Parser [b]
+someEndWith end element = some (element <* end)
+
+manyEndWith :: Parser a -> Parser b -> Parser [b]
+manyEndWith end element = someEndWith end element <|> pure []

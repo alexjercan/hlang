@@ -1,0 +1,2 @@
+let atom1 x => x + x end;
+>>> atom1 1 + 1 $
