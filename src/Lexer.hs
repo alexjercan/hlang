@@ -1,7 +1,8 @@
 module Lexer where
 
-import           Data.Char
-import           Parser
+import           Data.Char (isAlphaNum, isDigit, isLower, isSpace)
+import           Parser    (Parser, charP, charPredP, manyPredP, somePredP,
+                            stringP)
 
 ifToken :: Parser String
 ifToken = stringP "if"

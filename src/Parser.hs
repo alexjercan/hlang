@@ -88,3 +88,7 @@ someEndWith end element = some (element <* end)
 
 manyEndWith :: Parser a -> Parser b -> Parser [b]
 manyEndWith end element = someEndWith end element <|> pure []
+
+stripInput :: Either ParserError (a, Input) -> Either ParserError a
+stripInput (Right (a, _)) = Right a
+stripInput (Left err)     = Left err

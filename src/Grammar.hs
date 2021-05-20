@@ -1,8 +1,15 @@
-module HLang where
+module Grammar where
 
-import           Control.Applicative
-import           Lexer
-import           Parser
+import           Control.Applicative (Alternative ((<|>)))
+import           Lexer               (arrowToken, closedParenthesis,
+                                      divisionToken, elseToken, endToken,
+                                      entryToken, equalToken, fiToken,
+                                      functionCallToken, ifToken, integerToken,
+                                      lessThanEqualToken, lessThanToken,
+                                      letToken, literalToken, minusToken,
+                                      openParenthesis, plusToken, productToken,
+                                      thenToken, ws, ws')
+import           Parser              (Parser, charP, manyEndWith)
 
 newtype Atom
   = Atom String
