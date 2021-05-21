@@ -7,8 +7,8 @@ Compiler written in Haskell for the HLang imperative language. HLang is not a re
 #### Non Left Recursive
 
 <pre>
-program     ::= [declaration<b>;</b>]<b>*</b> <b>>>></b> instruction
-declaration ::= <b>let</b> function variable <b>=></b> instruction <b>end</b>
+program     ::= [declaration<b>;</b>]* <b>>>></b> instruction
+declaration ::= <b>let</b> name name <b>=></b> instruction <b>end</b>
 instruction ::= expression <b>==</b> expression
               | expression <b><</b> expression
               | expression <b><=</b> expression
@@ -19,11 +19,10 @@ expression  ::= term <b>+</b> expression
 term        ::= statement <b>*</b> term
               | statement <b>/</b> term
               | statement
-statement   ::= <b>if</b> instruction <b>then</b> instruction <b>else</b> instruction
+statement   ::= <b>if</b> instruction <b>then</b> instruction <b>else</b> instruction <b>fi</b>
               | <b>$</b> factor statement
               | factor
-factor      ::= variable
-              | function
+factor      ::= name
               | literal
               | <b>(</b> instruction <b>)</b>
 literal     ::= int
