@@ -59,8 +59,8 @@ stringP xs = Parser $ \input -> case runParser (traverse charP xs) input of
   Left _ -> Left $ ParserError (indexOfInput input) ("Expected \"" ++ xs ++ "\"")
   other  -> other
 
-stringP' :: Parser String -> Parser String -> Parser String
-stringP' r p = Parser $ \input -> case runParser r input of
+reservedP :: Parser String -> Parser String -> Parser String
+reservedP r p = Parser $ \input -> case runParser r input of
   Left _ -> runParser p input
   Right (xs, _) -> Left $ ParserError (indexOfInput input) ("Reserved keyword \"" ++ xs ++ "\"")
 

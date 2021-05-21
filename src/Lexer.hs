@@ -3,7 +3,7 @@ module Lexer where
 import           Control.Applicative (Alternative ((<|>)))
 import           Data.Char           (isAlphaNum, isDigit, isLower, isSpace)
 import           Parser              (Parser, charP, charPredP, eofP, manyPredP,
-                                      somePredP, stringP, stringP')
+                                      somePredP, stringP, reservedP)
 
 ifToken :: Parser String
 ifToken = stringP "if"
@@ -36,7 +36,7 @@ declarationEndToken :: Parser Char
 declarationEndToken = charP ';'
 
 atomToken :: Parser String
-atomToken = stringP' reservedToken camelToken
+atomToken = reservedP reservedToken camelToken
   where
     reservedToken = (ifToken <|> thenToken <|> elseToken <|> fiToken <|> letToken <|> endToken) <* ws'
     camelToken = (:) <$> charPredP error1 isLower <*> manyPredP error2 isAlphaNum

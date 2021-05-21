@@ -11,9 +11,8 @@ import           Lexer               (arrowToken, atomToken, closedParenthesis,
                                       thenToken, ws, ws')
 import           Parser              (Parser, manyEndWith, someSepBy)
 
-data Atom
-  = Variable String
-  | Function String
+newtype Atom
+  = Name String
   deriving (Show, Eq)
 
 newtype Literal
@@ -59,11 +58,8 @@ data Program
   = Program [Declaration] Instruction
   deriving (Show, Eq)
 
-variable :: Parser Atom
-variable = Variable <$> nameToken
-
-function :: Parser Atom
-function = Function <$> nameToken
+name :: Parser Atom
+name = Name <$> atomToken
 
 integer :: Parser Literal
 integer = Integer . read <$> integerToken
@@ -104,13 +100,13 @@ lessThanEqual = LessThanEqual <$> expression <*> (ws *> lessThanEqualToken *> ws
 
 functionDeclaration :: Parser Declaration
 functionDeclaration = letToken *> ws' *>
-                    (FunctionDeclaration <$> function <*>
-                      (ws' *> variable) <*>
+                    (FunctionDeclaration <$> name <*>
+                      (ws' *> name) <*>
                       (ws *> arrowToken *> ws *> instruction))
                     <* ws' <* endToken
 
 factor :: Parser Factor
-factor = parenthesis <|> Atom <$> (variable <|> function) <|> (Literal <$> integer)
+factor = parenthesis <|> Atom <$> name <|> Literal <$> integer
 
 statement :: Parser Statement
 statement = functionCall <|> ifStatement <|> Factor <$> factor
