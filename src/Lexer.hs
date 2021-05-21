@@ -1,8 +1,9 @@
 module Lexer where
 
-import           Data.Char (isAlphaNum, isDigit, isLower, isSpace)
-import           Parser    (Parser, charP, charPredP, manyPredP, somePredP,
-                            stringP)
+import           Control.Applicative (Alternative ((<|>)))
+import           Data.Char           (isAlphaNum, isDigit, isLower, isSpace)
+import           Parser              (Parser, charP, charPredP, eofP, manyPredP,
+                                      somePredP, stringP, stringP')
 
 ifToken :: Parser String
 ifToken = stringP "if"
@@ -31,11 +32,21 @@ entryToken = stringP ">>>"
 functionCallToken :: Parser Char
 functionCallToken = charP '$'
 
-literalToken :: Parser String
-literalToken = (:) <$> charPredP isLower <*> manyPredP isAlphaNum
+declarationEndToken :: Parser Char
+declarationEndToken = charP ';'
+
+atomToken :: Parser String
+atomToken = stringP' reservedToken camelToken
+  where
+    reservedToken = (ifToken <|> thenToken <|> elseToken <|> fiToken <|> letToken <|> endToken) <* ws'
+    camelToken = (:) <$> charPredP error1 isLower <*> manyPredP error2 isAlphaNum
+    error1 = "first character to be lower case"
+    error2 = "literal to contain zero ore more alphanumeric characters"
 
 integerToken :: Parser String
-integerToken = somePredP isDigit
+integerToken = somePredP error1 isDigit
+  where
+    error1 = "token to contain only digits"
 
 plusToken :: Parser Char
 plusToken = charP '+'
@@ -65,7 +76,10 @@ closedParenthesis :: Parser Char
 closedParenthesis = charP ')'
 
 ws :: Parser String
-ws = manyPredP isSpace
+ws = manyPredP "zero or more whitespace characters" isSpace
 
 ws' :: Parser String
-ws' = somePredP isSpace
+ws' = somePredP "one ore more whitespace characters" isSpace
+
+eofToken :: Parser String
+eofToken = eofP

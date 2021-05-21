@@ -1,59 +1,42 @@
 module Grammar where
 
 import           Control.Applicative (Alternative ((<|>)))
-import           Lexer               (arrowToken, closedParenthesis,
-                                      divisionToken, elseToken, endToken,
-                                      entryToken, equalToken, fiToken,
-                                      functionCallToken, ifToken, integerToken,
-                                      lessThanEqualToken, lessThanToken,
-                                      letToken, literalToken, minusToken,
+import           Lexer               (arrowToken, atomToken, closedParenthesis,
+                                      declarationEndToken, divisionToken,
+                                      elseToken, endToken, entryToken, eofToken,
+                                      equalToken, fiToken, functionCallToken,
+                                      ifToken, integerToken, lessThanEqualToken,
+                                      lessThanToken, letToken, minusToken,
                                       openParenthesis, plusToken, productToken,
                                       thenToken, ws, ws')
-import           Parser              (Parser, charP, manyEndWith)
+import           Parser              (Parser, manyEndWith, someSepBy)
 
-newtype Atom
-  = Atom String
-  deriving (Eq, Show)
-
-atom :: Parser Atom
-atom = Atom <$> literalToken
-
-data Factor
-  = Variable Atom
-  | Integer Int
-  | Parenthesis Expression
-  | FunctionCall Atom Instruction
+data Atom
+  = Variable String
+  | Function String
   deriving (Show, Eq)
 
-variable :: Parser Factor
-variable = Variable <$> atom
+newtype Literal
+  = Integer Int
+  deriving (Show, Eq)
 
-integer :: Parser Factor
-integer = Integer . read <$> integerToken
+data Factor
+  = Atom Atom
+  | Literal Literal
+  | Parenthesis Instruction
+  deriving (Show, Eq)
 
-parenthesis :: Parser Factor
-parenthesis = openParenthesis *> ws *> (Parenthesis <$> expression) <* ws <* closedParenthesis
-
-functionCall :: Parser Factor
-functionCall = FunctionCall <$> atom <*> (ws' *> instruction) <* ws <* functionCallToken
-
-factor :: Parser Factor
-factor = functionCall <|> variable <|> integer <|> parenthesis
-
-data Term
-  = Multiplication Factor Term
-  | Division Factor Term
+data Statement
+  = IfStatement Instruction Instruction Instruction
+  | FunctionCall Factor Statement
   | Factor Factor
   deriving (Show, Eq)
 
-multiplication :: Parser Term
-multiplication = Multiplication <$> factor <*> (ws *> productToken *> ws *> term)
-
-division :: Parser Term
-division = Division <$> factor <*> (ws *> divisionToken *> ws *> term)
-
-term :: Parser Term
-term = multiplication <|> division <|> Factor <$> factor
+data Term
+  = Multiplication Statement Term
+  | Division Statement Term
+  | Statement Statement
+  deriving (Show, Eq)
 
 data Expression
   = Addition Term Expression
@@ -61,75 +44,90 @@ data Expression
   | Term Term
   deriving (Show, Eq)
 
+data Instruction
+  = Equal Expression Expression
+  | LessThan Expression Expression
+  | LessThanEqual Expression Expression
+  | Expression Expression
+  deriving (Show, Eq)
+
+data Declaration
+  = FunctionDeclaration Atom Atom Instruction
+  deriving (Show, Eq)
+
+data Program
+  = Program [Declaration] Instruction
+  deriving (Show, Eq)
+
+variable :: Parser Atom
+variable = Variable <$> nameToken
+
+function :: Parser Atom
+function = Function <$> nameToken
+
+integer :: Parser Literal
+integer = Integer . read <$> integerToken
+
+parenthesis :: Parser Factor
+parenthesis = openParenthesis *> ws *> (Parenthesis <$> instruction) <* ws <* closedParenthesis
+
+ifStatement :: Parser Statement
+ifStatement = ifToken *> ws' *>
+              (IfStatement <$> instruction <*>
+                (ws' *> thenToken *> ws' *> instruction) <*>
+                (ws' *> elseToken *> ws' *> instruction))
+              <* ws' <* fiToken
+
+functionCall :: Parser Statement
+functionCall = functionCallToken *> ws *> (FunctionCall <$> factor <*> (ws *> statement))
+
+multiplication :: Parser Term
+multiplication = Multiplication <$> statement <*> (ws *> productToken *> ws *> term)
+
+division :: Parser Term
+division = Division <$> statement <*> (ws *> divisionToken *> ws *> term)
+
 addition :: Parser Expression
 addition = Addition <$> term <*> (ws *> plusToken *> ws *> expression)
 
 difference :: Parser Expression
 difference = Difference <$> term <*> (ws *> minusToken *> ws *> expression)
 
-expression :: Parser Expression
-expression = addition <|> difference <|> Term <$> term
-
-data Condition
-  = Equal Expression Expression
-  | LessThan Expression Expression
-  | LessThanEqual Expression Expression
-  deriving (Show, Eq)
-
-equal :: Parser Condition
+equal :: Parser Instruction
 equal = Equal <$> expression <*> (ws *> equalToken *> ws *> expression)
 
-lessThan :: Parser Condition
+lessThan :: Parser Instruction
 lessThan = LessThan <$> expression <*> (ws *> lessThanToken *> ws *> expression)
 
-lessThanEqual :: Parser Condition
+lessThanEqual :: Parser Instruction
 lessThanEqual = LessThanEqual <$> expression <*> (ws *> lessThanEqualToken *> ws *> expression)
-
-condition :: Parser Condition
-condition = equal <|> lessThan <|> lessThanEqual
-
-data Conditional
-  = IfStatement Condition Instruction Instruction
-  deriving (Show, Eq)
-
-ifStatement :: Parser Conditional
-ifStatement = ifToken *> ws' *>
-              (IfStatement <$> condition <*>
-                (ws' *> thenToken *> ws' *> instruction) <*>
-                (ws' *> elseToken *> ws' *> instruction))
-              <* ws' <* fiToken
-
-conditional :: Parser Conditional
-conditional = ifStatement
-
-data Instruction
-  = Conditional Conditional
-  | Expression Expression
-  | Condition Condition
-  deriving (Show, Eq)
-
-instruction :: Parser Instruction
-instruction = Conditional <$> conditional <|> Expression <$> expression <|> Condition <$> condition
-
-data Declaration
-  = FunctionDeclaration Atom Atom Instruction
-  deriving (Show, Eq)
 
 functionDeclaration :: Parser Declaration
 functionDeclaration = letToken *> ws' *>
-                    (FunctionDeclaration <$> atom <*>
-                      (ws' *> atom) <*>
+                    (FunctionDeclaration <$> function <*>
+                      (ws' *> variable) <*>
                       (ws *> arrowToken *> ws *> instruction))
                     <* ws' <* endToken
+
+factor :: Parser Factor
+factor = parenthesis <|> Atom <$> (variable <|> function) <|> (Literal <$> integer)
+
+statement :: Parser Statement
+statement = functionCall <|> ifStatement <|> Factor <$> factor
+
+term :: Parser Term
+term = multiplication <|> division <|> Statement <$> statement
+
+expression :: Parser Expression
+expression = addition <|> difference <|> Term <$> term
+
+instruction :: Parser Instruction
+instruction = equal <|> lessThan <|> lessThanEqual <|> Expression <$> expression
 
 declaration :: Parser Declaration
 declaration = functionDeclaration
 
-data Program
-  = Program [Declaration] Instruction
-  deriving (Show, Eq)
-
 program :: Parser Program
 program = Program <$>
-  manyEndWith (ws <* charP ';' <* ws) declaration <*>
-  (ws *> entryToken *> ws *> instruction)
+  manyEndWith (ws <* declarationEndToken <* ws) declaration <*>
+  (ws *> entryToken *> ws *> instruction <* ws <* eofToken)

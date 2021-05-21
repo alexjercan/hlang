@@ -59,23 +59,28 @@ stringP xs = Parser $ \input -> case runParser (traverse charP xs) input of
   Left _ -> Left $ ParserError (indexOfInput input) ("Expected \"" ++ xs ++ "\"")
   other  -> other
 
+stringP' :: Parser String -> Parser String -> Parser String
+stringP' r p = Parser $ \input -> case runParser r input of
+  Left _ -> runParser p input
+  Right (xs, _) -> Left $ ParserError (indexOfInput input) ("Reserved keyword \"" ++ xs ++ "\"")
+
 eofP :: Parser String
 eofP = Parser $ \input -> case readInput input of
-  Nothing -> Right ("", input)
-  _       -> Left $ ParserError (indexOfInput input) "Expected EOF"
+  Nothing      -> Right ("", input)
+  Just (x, _) -> Left $ ParserError (indexOfInput input) ("Expected end of string but found \"" ++ [x] ++ "\"")
 
-charPredP :: (Char -> Bool) -> Parser Char
-charPredP f = Parser $ \input -> case readInput input of
+charPredP :: String -> (Char -> Bool) -> Parser Char
+charPredP desc f = Parser $ \input -> case readInput input of
   Just (x, xs)
     | f x -> Right (x, xs)
-    | otherwise -> Left $ ParserError (indexOfInput input) "TODO: Error"
-  _ -> Left $ ParserError (indexOfInput input) "TODO: Error"
+    | otherwise -> Left $ ParserError (indexOfInput input) ("Expected " ++ desc ++ " but found \"" ++ [x] ++ "\"")
+  _ -> Left $ ParserError (indexOfInput input) ("Expected " ++ desc ++ " but reached end of string")
 
-manyPredP :: (Char -> Bool) -> Parser String
-manyPredP = many . charPredP
+manyPredP :: String -> (Char -> Bool) -> Parser String
+manyPredP desc = many . charPredP desc
 
-somePredP :: (Char -> Bool) -> Parser String
-somePredP = some . charPredP
+somePredP :: String -> (Char -> Bool) -> Parser String
+somePredP desc = some . charPredP desc
 
 someSepBy :: Parser a -> Parser b -> Parser [b]
 someSepBy sep element = (:) <$> element <*> many (sep *> element)

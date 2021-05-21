@@ -1,2 +1,2 @@
 let atom1 x => x + x end;
->>> atom1 if 1 == 1 then 1 else 2 fi $
+>>> $ atom1 if 1 == 1 then 1 else 2 fi
