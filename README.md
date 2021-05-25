@@ -31,7 +31,38 @@ literal     ::= int
 ## Code Example
 
 ```
+# file.hlang
 let square x => if x == 0 then 0 else x * x fi end;
 let func x => $ square x + $ square x end;
 >>> $ func 5
+# output
+$ 50
+```
+
+## Getting Started
+
+#### Usage
+
+* Download the latest release for your platform or build it from source.
+
+```shell
+$ hlang /path/to/file.hlang
+```
+
+#### Build
+
+##### Tested using:
+* Windows 10
+* GHC version 8.6.5
+* cabal-install version 3.4.0.0
+
+##### Requirements:
+In order to build this project you will need GHC and cabal installed:
+* [Haskell](https://www.haskell.org/downloads/)
+
+```shell
+$ git clone https://github.com/alexjercan/hlang.git
+$ cd hlang
+$ cabal init
+$ cabal build
 ```
