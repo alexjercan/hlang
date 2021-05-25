@@ -1,22 +1,25 @@
-module Grammar where
+module HLangParser where
 
 import           Control.Applicative (Alternative ((<|>)))
-import           Lexer               (arrowToken, atomToken, closedParenthesis,
+import           HLangLexer          (arrowToken, atomToken, closedParenthesis,
                                       declarationEndToken, divisionToken,
                                       elseToken, endToken, entryToken, eofToken,
                                       equalToken, fiToken, functionCallToken,
                                       ifToken, integerToken, lessThanEqualToken,
                                       lessThanToken, letToken, minusToken,
                                       openParenthesis, plusToken, productToken,
-                                      thenToken, ws, ws')
-import           Parser              (Parser, manyEndWith, someSepBy)
+                                      thenToken, ws, ws', booleanToken)
+import           Parser              (Parser, ParserError, makeInput,
+                                      manyEndWith, runParser, someSepBy,
+                                      stripInput)
 
 newtype Atom
   = Name String
   deriving (Show, Eq)
 
-newtype Literal
+data Literal
   = Integer Int
+  | Boolean Bool
   deriving (Show, Eq)
 
 data Factor
@@ -64,6 +67,9 @@ name = Name <$> atomToken
 integer :: Parser Literal
 integer = Integer . read <$> integerToken
 
+boolean :: Parser Literal
+boolean = Boolean . read <$> booleanToken
+
 parenthesis :: Parser Factor
 parenthesis = openParenthesis *> ws *> (Parenthesis <$> instruction) <* ws <* closedParenthesis
 
@@ -106,7 +112,7 @@ functionDeclaration = letToken *> ws' *>
                     <* ws' <* endToken
 
 factor :: Parser Factor
-factor = parenthesis <|> Atom <$> name <|> Literal <$> integer
+factor = parenthesis <|> Atom <$> name <|> Literal <$> integer <|> Literal <$> boolean
 
 statement :: Parser Statement
 statement = functionCall <|> ifStatement <|> Factor <$> factor
@@ -127,3 +133,6 @@ program :: Parser Program
 program = Program <$>
   manyEndWith (ws <* declarationEndToken <* ws) declaration <*>
   (ws *> entryToken *> ws *> instruction <* ws <* eofToken)
+
+parseProgram :: String -> Either ParserError Program
+parseProgram = stripInput . runParser program . makeInput

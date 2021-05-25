@@ -27,7 +27,7 @@ library
     exposed-modules:  HLang
 
     -- Modules included in this library but not exported.
-    other-modules: Grammar, Lexer, Parser
+    other-modules: Parser, HLangLexer, HLangParser, HLangInterpreter
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

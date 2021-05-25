@@ -1,4 +1,4 @@
-module Lexer where
+module HLangLexer where
 
 import           Control.Applicative (Alternative ((<|>)))
 import           Data.Char           (isAlphaNum, isDigit, isLower, isSpace)
@@ -38,7 +38,7 @@ declarationEndToken = charP ';'
 atomToken :: Parser String
 atomToken = reservedP reservedToken camelToken
   where
-    reservedToken = (ifToken <|> thenToken <|> elseToken <|> fiToken <|> letToken <|> endToken) <* ws'
+    reservedToken = (ifToken <|> thenToken <|> elseToken <|> fiToken <|> letToken <|> endToken <|> booleanToken) <* ws'
     camelToken = (:) <$> charPredP error1 isLower <*> manyPredP error2 isAlphaNum
     error1 = "first character to be lower case"
     error2 = "literal to contain zero ore more alphanumeric characters"
@@ -47,6 +47,9 @@ integerToken :: Parser String
 integerToken = somePredP error1 isDigit
   where
     error1 = "token to contain only digits"
+
+booleanToken :: Parser String
+booleanToken = stringP "True" <|> stringP "False"
 
 plusToken :: Parser Char
 plusToken = charP '+'

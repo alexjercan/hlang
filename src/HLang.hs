@@ -1,10 +1,18 @@
 module HLang where
 
-import           Grammar (Program, program)
-import           Parser  (Parser (runParser), ParserError, makeInput,
-                          stripInput)
+import           HLangInterpreter (evalProgram)
+import           HLangParser      (Literal, Program, parseProgram)
 
-newtype ParserResult = ParserResult (Either ParserError Program) deriving (Show)
+type ParserResult = Program
 
-parseProgram :: String -> ParserResult
-parseProgram = ParserResult <$> stripInput . runParser program . makeInput
+parse :: String -> Maybe ParserResult
+parse str = case parseProgram str of
+  Left _  -> Nothing
+  Right p -> Just p
+
+type InterpreterResult = Literal
+
+interpret :: String -> Maybe InterpreterResult
+interpret str = case parse str of
+  Nothing -> Nothing
+  Just p  -> Just $ evalProgram p
