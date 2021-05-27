@@ -78,6 +78,9 @@ jobs:
           path: source
       - name: generate cabal.project
         run: |
+          touch cabal.project
+          echo "packages: $GITHUB_WORKSPACE/source/." >> cabal.project
+          cat cabal.project
           $CABAL v2-configure
       - name: install dependencies
         run: |
