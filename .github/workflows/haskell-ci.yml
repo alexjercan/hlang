@@ -81,7 +81,6 @@ jobs:
           touch cabal.project
           echo "packages: $GITHUB_WORKSPACE/source/." >> cabal.project
           cat cabal.project
-          $CABAL v2-configure
       - name: install dependencies
         run: |
           $CABAL v2-build $ARG_COMPILER --disable-tests --disable-benchmarks --dependencies-only -j2 all
