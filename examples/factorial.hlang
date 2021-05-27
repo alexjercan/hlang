@@ -1,2 +1,2 @@
-let factorial x => if x == 0 then 1 else $ factorial (x - 1) fi end;
+let factorial x => if x == 0 then 1 else x * $ factorial (x - 1) fi end;
 >>> $ factorial 10

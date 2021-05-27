@@ -20,12 +20,14 @@ term        ::= statement <b>*</b> term
               | statement <b>/</b> term
               | statement
 statement   ::= <b>if</b> instruction <b>then</b> instruction <b>else</b> instruction <b>fi</b>
-              | <b>$</b> factor statement
+              | <b>$</b> name statement
               | factor
 factor      ::= name
               | literal
               | <b>(</b> instruction <b>)</b>
 literal     ::= int
+              | bool
+name        ::= string
 </pre>
 
 ## Code Example

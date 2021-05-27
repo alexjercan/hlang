@@ -30,7 +30,7 @@ data Factor
 
 data Statement
   = IfStatement Instruction Instruction Instruction
-  | FunctionCall Factor Statement
+  | FunctionCall Atom Statement
   | Factor Factor
   deriving (Show, Eq)
 
@@ -81,7 +81,7 @@ ifStatement = ifToken *> ws' *>
               <* ws' <* fiToken
 
 functionCall :: Parser Statement
-functionCall = functionCallToken *> ws *> (FunctionCall <$> factor <*> (ws *> statement))
+functionCall = functionCallToken *> ws *> (FunctionCall <$> name <*> (ws *> statement))
 
 multiplication :: Parser Term
 multiplication = Multiplication <$> statement <*> (ws *> productToken *> ws *> term)

@@ -13,6 +13,4 @@ parse str = case parseProgram str of
 type InterpreterResult = Literal
 
 interpret :: String -> Maybe InterpreterResult
-interpret str = case parse str of
-  Nothing -> Nothing
-  Just p  -> Just $ evalProgram p
+interpret str = evalProgram =<< parse str

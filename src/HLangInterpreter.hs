@@ -1,71 +1,96 @@
 module HLangInterpreter where
 
-import           HLangParser (Declaration (..), Expression (..), Factor (..),
-                              Instruction (..), Literal (..), Program (..),
-                              Statement (..), Term (..))
+import           Control.Monad (join, liftM2)
+import           HLangParser   (Atom, Declaration (..), Expression (..),
+                                Factor (..), Instruction (..), Literal (..),
+                                Program (..), Statement (..), Term (..))
 
-evalAddition :: Literal -> Literal -> Literal
-evalAddition (Integer a) (Integer b) = Integer (a + b)
-evalAddition _ _                     = undefined
+data Binding = Binding Atom Literal deriving (Show, Eq)
 
-evalDifference :: Literal -> Literal -> Literal
-evalDifference (Integer a) (Integer b) = Integer (a - b)
-evalDifference _ _                     = undefined
+data Context = Context [Declaration] [Binding] deriving (Show, Eq)
 
-evalMultiplication :: Literal -> Literal -> Literal
-evalMultiplication (Integer a) (Integer b) = Integer (a * b)
-evalMultiplication _ _                     = undefined
+resolveBinding :: Atom -> [Binding] -> Maybe Literal
+resolveBinding _ [] = Nothing
+resolveBinding x ((Binding atom literal):rest)
+  | atom == x = Just literal
+  | otherwise = resolveBinding x rest
 
-evalDivision :: Literal -> Literal -> Literal
-evalDivision (Integer a) (Integer b) = Integer (a `div` b)
-evalDivision _ _                     = undefined
+resolveDeclaration :: Atom -> [Declaration] -> Maybe (Atom, Instruction)
+resolveDeclaration _ [] = Nothing
+resolveDeclaration x ((FunctionDeclaration atom arg instr):rest)
+  | atom == x = Just (arg, instr)
+  | otherwise = resolveDeclaration x rest
 
-evalEqual :: Literal -> Literal -> Literal
-evalEqual (Integer a) (Integer b) = Boolean $ a == b
-evalEqual (Boolean a) (Boolean b) = Boolean $ a == b
-evalEqual _ _                     = undefined
+evalAddition :: Literal -> Literal -> Maybe Literal
+evalAddition (Integer a) (Integer b) = Just $ Integer (a + b)
+evalAddition (Boolean a) (Boolean b) = Just $ Boolean (a || b)
+evalAddition _ _                     = Nothing
 
-evalLessThan :: Literal -> Literal -> Literal
-evalLessThan (Integer a) (Integer b) = Boolean $ a < b
-evalLessThan _ _                     = undefined
+evalDifference :: Literal -> Literal -> Maybe Literal
+evalDifference (Integer a) (Integer b) = Just $ Integer (a - b)
+evalDifference _ _                     = Nothing
 
-evalLessThanEqual :: Literal -> Literal -> Literal
-evalLessThanEqual (Integer a) (Integer b) = Boolean $ a <= b
-evalLessThanEqual _ _                     = undefined
+evalMultiplication :: Literal -> Literal -> Maybe Literal
+evalMultiplication (Integer a) (Integer b) = Just $ Integer (a * b)
+evalMultiplication (Boolean a) (Boolean b) = Just $ Boolean (a && b)
+evalMultiplication _ _                     = Nothing
 
-evalFactor :: Factor -> Literal
-evalFactor (Atom atom)         = undefined
-evalFactor (Literal literal)   = literal
-evalFactor (Parenthesis instr) = evalInstruction instr
+evalDivision :: Literal -> Literal -> Maybe Literal
+evalDivision (Integer a) (Integer b) = Just $ Integer (a `div` b)
+evalDivision _ _                     = Nothing
 
-evalIfStatement :: Instruction -> Instruction -> Instruction -> Literal
-evalIfStatement condition thenInstr elseInstr = case evalInstruction condition of
-  Boolean b -> if b then evalInstruction thenInstr else evalInstruction elseInstr
-  Integer x -> undefined
+evalEqual :: Literal -> Literal -> Maybe Literal
+evalEqual (Integer a) (Integer b) = Just $ Boolean $ a == b
+evalEqual (Boolean a) (Boolean b) = Just $ Boolean $ a == b
+evalEqual _ _                     = Nothing
 
-evalStatement :: Statement -> Literal
-evalStatement (IfStatement condition thenInstr elseInstr) = evalIfStatement condition thenInstr elseInstr
-evalStatement (FunctionCall factor stmt)                  = undefined
-evalStatement (Factor factor)                             = evalFactor factor
+evalLessThan :: Literal -> Literal -> Maybe Literal
+evalLessThan (Integer a) (Integer b) = Just $ Boolean $ a < b
+evalLessThan _ _                     = Nothing
 
-evalTerm :: Term -> Literal
-evalTerm (Multiplication statement term) = evalStatement statement `evalMultiplication` evalTerm term
-evalTerm (Division statement term) = evalStatement statement `evalDivision` evalTerm term
-evalTerm (Statement statement) = evalStatement statement
+evalLessThanEqual :: Literal -> Literal -> Maybe Literal
+evalLessThanEqual (Integer a) (Integer b) = Just $ Boolean $ a <= b
+evalLessThanEqual _ _                     = Nothing
 
-evalExpression :: Expression -> Literal
-evalExpression (Addition term expr) = evalTerm term `evalAddition` evalExpression expr
-evalExpression (Difference term expr) = evalTerm term `evalDifference` evalExpression expr
-evalExpression (Term term) = evalTerm term
+evalFactor :: Context -> Factor -> Maybe Literal
+evalFactor (Context _ bindings) (Atom atom) = resolveBinding atom bindings
+evalFactor _ (Literal literal)              = Just literal
+evalFactor ctx (Parenthesis instr)          = evalInstruction ctx instr
 
-evalInstruction :: Instruction -> Literal
-evalInstruction (Equal lhs rhs)         = evalExpression lhs `evalEqual` evalExpression rhs
-evalInstruction (LessThan lhs rhs)      = evalExpression lhs `evalLessThan` evalExpression rhs
-evalInstruction (LessThanEqual lhs rhs) = evalExpression lhs `evalLessThanEqual` evalExpression rhs
-evalInstruction (Expression expr)       = evalExpression expr
+evalIfStatement :: Context -> Instruction -> Instruction -> Instruction -> Maybe Literal
+evalIfStatement ctx condition thenInstr elseInstr = case evalInstruction ctx condition of
+  Just lit -> case lit of
+    Boolean b -> if b then evalInstruction ctx thenInstr else evalInstruction ctx elseInstr
+    Integer x -> Nothing
+  Nothing -> Nothing
 
-evalDeclaration :: Declaration -> a
-evalDeclaration (FunctionDeclaration func arg instr) = undefined
+evalStatement :: Context -> Statement -> Maybe Literal
+evalStatement ctx (IfStatement condition thenInstr elseInstr) = evalIfStatement ctx condition thenInstr elseInstr
+evalStatement ctx@(Context decls bindings) (FunctionCall atom stmt) = case resolveDeclaration atom decls of
+  Just (arg, instr) -> case evalStatement ctx stmt of
+    Just value -> evalInstruction (Context decls (Binding arg value:bindings)) instr
+    Nothing -> Nothing
+  Nothing -> Nothing
+evalStatement ctx (Factor factor)                             = evalFactor ctx factor
 
-evalProgram :: Program -> Literal
-evalProgram (Program decls instr) = evalInstruction instr
+evalTerm :: Context -> Term -> Maybe Literal
+evalTerm ctx (Multiplication statement term) = join $ liftM2 evalMultiplication (evalStatement ctx statement) (evalTerm ctx term)
+evalTerm ctx (Division statement term)       = join $ liftM2 evalDivision (evalStatement ctx statement) (evalTerm ctx term)
+evalTerm ctx (Statement statement)           = evalStatement ctx statement
+
+evalExpression :: Context -> Expression -> Maybe Literal
+evalExpression ctx (Addition term expr)   = join $ liftM2 evalAddition (evalTerm ctx term) (evalExpression ctx expr)
+evalExpression ctx (Difference term expr) = join $ liftM2 evalDifference (evalTerm ctx term) (evalExpression ctx expr)
+evalExpression ctx (Term term)            = evalTerm ctx term
+
+evalInstruction :: Context -> Instruction -> Maybe Literal
+evalInstruction ctx (Equal lhs rhs)         = join $ liftM2 evalEqual (evalExpression ctx lhs) (evalExpression ctx rhs)
+evalInstruction ctx (LessThan lhs rhs)      = join $ liftM2 evalLessThan (evalExpression ctx lhs) (evalExpression ctx rhs)
+evalInstruction ctx (LessThanEqual lhs rhs) = join $ liftM2 evalLessThanEqual (evalExpression ctx lhs) (evalExpression ctx rhs)
+evalInstruction ctx (Expression expr)       = evalExpression ctx expr
+
+evalDeclaration :: [Declaration] -> Context
+evalDeclaration decls = Context decls []
+
+evalProgram :: Program -> Maybe Literal
+evalProgram (Program decls instr) = evalInstruction (evalDeclaration decls) instr
