@@ -1,7 +1,8 @@
 module HLang where
 
+import           HLangGrammar     (Literal, Program)
 import           HLangInterpreter (evalProgram)
-import           HLangParser      (Literal, Program, parseProgram)
+import           HLangParser      (parseProgram)
 
 type ParserResult = Program
 

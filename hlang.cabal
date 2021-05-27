@@ -24,7 +24,7 @@ extra-source-files:
     README.md
 
 library
-    exposed-modules:  HLang
+    exposed-modules:  HLang, HLangGrammar
 
     -- Modules included in this library but not exported.
     other-modules: Parser, HLangLexer, HLangParser, HLangInterpreter
@@ -48,4 +48,16 @@ executable hlang
         hlang
 
     hs-source-dirs:   app
+    default-language: Haskell2010
+
+test-suite unit-tests
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+
+    build-depends:
+        base ^>=4.12.0.0,
+        HUnit ^>= 1.6.2.0,
+        hlang
+
+    hs-source-dirs:   test
     default-language: Haskell2010

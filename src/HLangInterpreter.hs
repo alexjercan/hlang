@@ -1,7 +1,7 @@
 module HLangInterpreter where
 
 import           Control.Monad (join, liftM2)
-import           HLangParser   (Atom, Declaration (..), Expression (..),
+import           HLangGrammar  (Atom, Declaration (..), Expression (..),
                                 Factor (..), Instruction (..), Literal (..),
                                 Program (..), Statement (..), Term (..))
 
