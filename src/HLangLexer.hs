@@ -38,7 +38,7 @@ declarationEndToken = charP ';'
 atomToken :: Parser String
 atomToken = reservedP reservedToken camelToken
   where
-    reservedToken = (ifToken <|> thenToken <|> elseToken <|> fiToken <|> letToken <|> endToken <|> booleanToken) <* ws'
+    reservedToken = (ifToken <|> thenToken <|> elseToken <|> fiToken <|> letToken <|> endToken <|> booleanToken) <* charPredP "" (not . isAlphaNum)
     camelToken = (:) <$> charPredP error1 isLower <*> manyPredP error2 isAlphaNum
     error1 = "first character to be lower case"
     error2 = "literal to contain zero ore more alphanumeric characters"

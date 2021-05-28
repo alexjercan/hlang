@@ -16,6 +16,8 @@ tests = [ ("Test Addition", ">>> 1 + 1", Just $ Integer 2)
         , ("Test Function Call", "let atom1 x => x + x end;\n>>> $ atom1 1 + 1", Just $ Integer 3)
         , ("Test Function Call", "let atom1 x => x + x end;\n>>> $ atom1 if 1 == 1 then 1 else 2 fi", Just $ Integer 2)
         , ("Test Program", "let square x => if x == 0 then 0 else x * x fi end;\nlet func x => $ square x + $ square x end;\n>>> $ func 5", Just $ Integer 50)
+        , ("Test Program", "let and a b => a * b end;\nlet or a b => a + b end;\n>>> $ and True False", Just $ Boolean False)
+        , ("Test Program", "let const1 => 1 end;\n>>> $ const1", Just $ Integer 1)
         ]
 
 mkTest :: (Eq a, Show a) => (t -> a) -> (String, t, a) -> Test

@@ -15,7 +15,7 @@ import           HLangLexer          (arrowToken, atomToken, booleanToken,
                                       plusToken, productToken, thenToken, ws,
                                       ws')
 import           Parser              (Parser, ParserError, makeInput,
-                                      manyEndWith, runParser, someSepBy,
+                                      manyEndWith, runParser, manySepBy,
                                       stripInput)
 
 name :: Parser Atom
@@ -38,7 +38,7 @@ ifStatement = ifToken *> ws' *>
               <* ws' <* fiToken
 
 functionCall :: Parser Statement
-functionCall = functionCallToken *> ws *> (FunctionCall <$> name <*> (ws *> statement))
+functionCall = functionCallToken *> ws *> (FunctionCall <$> name <*> (ws *> manySepBy ws statement))
 
 multiplication :: Parser Term
 multiplication = Multiplication <$> statement <*> (ws *> productToken *> ws *> term)
@@ -64,7 +64,7 @@ lessThanEqual = LessThanEqual <$> expression <*> (ws *> lessThanEqualToken *> ws
 functionDeclaration :: Parser Declaration
 functionDeclaration = letToken *> ws' *>
                     (FunctionDeclaration <$> name <*>
-                      (ws' *> name) <*>
+                      (ws' *> manySepBy ws name) <*>
                       (ws *> arrowToken *> ws *> instruction))
                     <* ws' <* endToken
 

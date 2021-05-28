@@ -15,7 +15,7 @@ resolveBinding x ((Binding atom literal):rest)
   | atom == x = Just literal
   | otherwise = resolveBinding x rest
 
-resolveDeclaration :: Atom -> [Declaration] -> Maybe (Atom, Instruction)
+resolveDeclaration :: Atom -> [Declaration] -> Maybe ([Atom], Instruction)
 resolveDeclaration _ [] = Nothing
 resolveDeclaration x ((FunctionDeclaration atom arg instr):rest)
   | atom == x = Just (arg, instr)
@@ -64,11 +64,14 @@ evalIfStatement ctx condition thenInstr elseInstr = case evalInstruction ctx con
     Integer x -> Nothing
   Nothing -> Nothing
 
+evalFunctionCallArgs :: Context -> [Atom] -> [Statement] -> Maybe [Binding]
+evalFunctionCallArgs ctx args stmts = zipWith Binding args <$> traverse (evalStatement ctx) stmts
+
 evalStatement :: Context -> Statement -> Maybe Literal
 evalStatement ctx (IfStatement condition thenInstr elseInstr) = evalIfStatement ctx condition thenInstr elseInstr
-evalStatement ctx@(Context decls bindings) (FunctionCall atom stmt) = case resolveDeclaration atom decls of
-  Just (arg, instr) -> case evalStatement ctx stmt of
-    Just value -> evalInstruction (Context decls (Binding arg value:bindings)) instr
+evalStatement ctx@(Context decls bindings) (FunctionCall atom stmts) = case resolveDeclaration atom decls of
+  Just (args, instr) -> case evalFunctionCallArgs ctx args stmts of
+    Just bs -> evalInstruction (Context decls (bs ++ bindings)) instr
     Nothing -> Nothing
   Nothing -> Nothing
 evalStatement ctx (Factor factor)                             = evalFactor ctx factor

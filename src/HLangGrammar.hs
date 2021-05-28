@@ -17,7 +17,7 @@ data Factor
 
 data Statement
   = IfStatement Instruction Instruction Instruction
-  | FunctionCall Atom Statement
+  | FunctionCall Atom [Statement]
   | Factor Factor
   deriving (Show, Eq)
 
@@ -41,7 +41,7 @@ data Instruction
   deriving (Show, Eq)
 
 data Declaration
-  = FunctionDeclaration Atom Atom Instruction
+  = FunctionDeclaration Atom [Atom] Instruction
   deriving (Show, Eq)
 
 data Program
